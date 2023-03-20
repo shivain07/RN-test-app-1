@@ -1,4 +1,5 @@
 export const ApiUrl = {
     getUser: "/users",
-    getPosts:"/posts"
+    getPosts: "/posts",
+    uploadPost: "/posts"
 }

@@ -1,8 +1,5 @@
 import Axios, { AxiosResponse } from "axios";
 
-interface IData {
-    [key: string]: string | number | boolean;
-}
 const createAxiosInstance = (baseURL: string) => {
     return Axios.create({
         baseURL: baseURL,
@@ -11,7 +8,7 @@ const createAxiosInstance = (baseURL: string) => {
 }
 const axiosInstance = createAxiosInstance("https://jsonplaceholder.typicode.com");
 
-const post = (url: string, data: IData) => {
+const post = <T,>(url: string, data: T) => {
     return axiosInstance.post(url, data);
 };
 

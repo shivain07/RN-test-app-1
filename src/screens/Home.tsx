@@ -1,9 +1,11 @@
 import React, { useEffect, useContext, useState } from 'react';
-import { Box, Heading, Text, HStack, FlatList, AspectRatio, Center, Stack, Image, Container, Button } from 'native-base';
+import { Box, Heading, Text, HStack, FlatList, AspectRatio, Center, Stack, Image, Container, Button, ScrollView } from 'native-base';
 import commonAPIService from '../axios-services/common-api-services';
 import { ApiUrl } from '../api/BasicApi';
 import { UserDetailContext } from '../context/UserContext';
 import { ScreenNavigationProp } from '../../types';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { SafeAreaView, LogBox } from 'react-native';
 
 interface IPost {
     userId: string | number,
@@ -11,9 +13,23 @@ interface IPost {
     body: string,
     title: string
 }
-function Home({ navigation }:{ navigation: ScreenNavigationProp }) {
-    const { userDetails, setIsLoggedIn} = useContext(UserDetailContext);
-    const [posts, setPosts] = useState<IPost[]>();
+function Home({ navigation }: { navigation: ScreenNavigationProp }) {
+    const { userDetails, setIsLoggedIn } = useContext(UserDetailContext);
+    const [posts, setPosts] = useState<IPost[]>([]);
+    const [postNum, setPostNum] = useState({
+        initial: 0,
+        last: 5
+    });
+    const [showArrow, setShowArrow] = useState({
+        left: false,
+        right: true
+    });
+    useEffect(() => {
+        LogBox.ignoreLogs(['VirtualizedLists should never be nested']);
+    }, [])
+    useEffect(() => {
+        getuserPosts();
+    }, []);
     useEffect(() => {
         getPosts();
     }, []);
@@ -25,34 +41,86 @@ function Home({ navigation }:{ navigation: ScreenNavigationProp }) {
     const logout = () => {
         setIsLoggedIn(false);
     }
+    useEffect(() => {
+        if (postNum.initial <= 0) {
+            setShowArrow({
+                left: false,
+                right: true
+            });
+        } else if (postNum.last >= posts.length) {
+            setShowArrow({
+                left: true,
+                right: false
+            });
+        } else {
+            setShowArrow({
+                left: true,
+                right: true
+            });
+        }
+    }, [postNum, posts.length]);
+    const getuserPosts = () => {
+        commonAPIService.get(ApiUrl.getPosts).then((res) => {
+            setPosts(res.data);
+        });
+    }
+    const paginateHandler = (type: number) => {
+        let temp = {
+            initial: postNum?.initial,
+            last: postNum?.last
+        }
+        if (type === -1) {
+            setPostNum({
+                initial: temp.initial - 5,
+                last: temp.initial
+            });
+        } else {
+            setPostNum({
+                initial: temp.last,
+                last: temp.last + 5
+            });
+        }
+    }
     return (
-        <Box p={2} flex={1}>
-            <Box alignItems={"flex-end"}>
-                <Button size={"md"} variant={"ghost"} colorScheme="secondary" onPress={logout}>Logout</Button>
-            </Box>
-            <Heading size={"md"} my={3}>
-                <Text highlight _dark={{
-                    color: "coolgray.800"
-                }}>
-                    Welcome
-                </Text>
-                {" "}{userDetails?.email}
-            </Heading>
-            <Box my={2} p={4}>
-                <Heading size={"lg"}>
-                    Your posts
+        <SafeAreaView style={{ flex: 1 }}>
+            <Box p={2} flex={1}>
+                <Box alignItems={"flex-end"}>
+                    <Button size={"md"} variant={"ghost"} colorScheme="secondary" onPress={logout}>Logout</Button>
+                </Box>
+                <Heading size={"md"} my={3}>
+                    <Text highlight _dark={{
+                        color: "coolgray.800"
+                    }}>
+                        Welcome
+                    </Text>
+                    {" "}{userDetails?.email}
                 </Heading>
-                <FlatList
-                    data={posts?.slice(0, 5)}
-                    renderItem={({ item }) => <Card item={{
-                        ...item,
-                        postBy: userDetails?.email
-                    }} />}
-                    horizontal={true}
-                    keyExtractor={item => `${item.id}`}
-                />
-            </Box>
-        </Box>
+                <ScrollView>
+
+                    <Box my={2} p={4}>
+                        <Heading size={"lg"}>
+                            Your posts
+                        </Heading>
+                        <FlatList
+                            data={posts?.slice(postNum.initial, postNum.last)}
+                            renderItem={({ item }) => <Card item={{
+                                ...item,
+                                postBy: userDetails?.email
+                            }} />}
+                            keyExtractor={item => `${item.id}`}
+                        />
+                    </Box>
+                    <HStack w="100%" justifyContent="space-between">
+                        <Box>
+                            {showArrow.left && <MaterialCommunityIcons name="arrow-left-bold-box" color={"#8F00FF"} size={56} onPress={() => paginateHandler(-1)} />}
+                        </Box>
+                        <Box>
+                            {showArrow.right && <MaterialCommunityIcons name="arrow-right-bold-box" color={"#8F00FF"} size={56} onPress={() => paginateHandler(1)} />}
+                        </Box>
+                    </HStack>
+                </ScrollView >
+            </Box >
+        </SafeAreaView>
     );
 }
 
@@ -78,7 +146,7 @@ const Card = ({
             <Box>
                 <AspectRatio w="100%" ratio={16 / 9}>
                     <Image source={{
-                        uri: "https://www.holidify.com/images/cmsuploads/compressed/Bangalore_citycover_20190613234056.jpg"
+                        uri: `https://picsum.photos/300/30${item?.id < 10 ? item?.id : 1}`
                     }} alt="image" />
                 </AspectRatio>
                 <Center bg="violet.500" _dark={{
